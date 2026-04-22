@@ -44,4 +44,8 @@ Route::middleware('auth')->group(function () {
 
     // 4. The Admin Farmer + Land Creation Endpoint
     Route::post('/admin/farmers', [AdminFarmerController::class, 'store'])->name('admin.farmers.store');
+
+    Route::get('/admin/tambah-petani', function () {
+        return view('admin.register-farmer');
+    })->name('admin.register-farmer');
 });

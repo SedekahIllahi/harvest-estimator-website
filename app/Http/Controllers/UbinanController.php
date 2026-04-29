@@ -4,7 +4,56 @@ namespace App\Http\Controllers;
 
 use App\Models\Land;
 use App\Models\Ubinan;
+use App\Services\HarvestService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class UbinanController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Menampilkan daftar ubinan (riwayat).
+     * - Petani: hanya ubinan dari lahan miliknya sendiri.
+     * - Bapak Dukuh: semua ubinan.
+     */
+    public function index()
+    {
+        $user = Auth::user();
+
+        if ($user->isBapakDukuh()) {
+            $ubinans = Ubinan::with('land.user')->orderBy('created_at', 'desc')->get();
+        } else {
+            $ubinans = Ubinan::whereHas('land', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->with('land')->orderBy('created_at', 'desc')->get();
+        }
+
+        return view('ubinans.index', compact('ubinans'));
+    }
+
+    /**
+     * Form tambah ubinan.
+     */
+    public function create()
+    {
+        $user = Auth::user();
+
+        if ($user->isBapakDukuh()) {
+            $lands = Land::with('user')->get();
+        } else {
+            $lands = Land::where('user_id', $user->id)->get();
+        }
+
+        return view('ubinans.create', compact('lands'));
+    }
+
+    /**
+     * Simpan data ubinan baru.
+     */
 
 class UbinanController extends Controller
 {
@@ -22,6 +71,43 @@ class UbinanController extends Controller
     {
         $validated = $request->validate([
             'land_id' => 'required|exists:lands,id',
+            'sample_weight_kg' => 'required|numeric|min:0.01',
+            'weather_note' => 'nullable|string|max:255',
+        ]);
+
+        $land = Land::findOrFail($request->land_id);
+        $estimatedTons = HarvestService::calculateTotalYield(
+            $request->sample_weight_kg,
+            $land->area_size
+        );
+
+        $ubinan->update([
+            'land_id' => $request->land_id,
+            'sample_weight_kg' => $request->sample_weight_kg,
+            'estimated_yield_tons' => $estimatedTons,
+            'weather_note' => $request->weather_note,
+        ]);
+
+        return redirect()->route('ubinans.index')
+            ->with('success', 'Data ubinan berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus ubinan.
+     */
+    public function destroy($id)
+    {
+        $ubinan = Ubinan::findOrFail($id);
+        $user = Auth::user();
+
+        if ($user->isFarmer() && $ubinan->land->user_id !== $user->id) {
+            abort(403);
+        }
+
+        $ubinan->delete();
+
+        return redirect()->route('ubinans.index')
+            ->with('success', 'Data ubinan berhasil dihapus.');
             'sample_weight_kg' => 'required|numeric|min:0.1',
             'projected_harvest_date' => 'required|date',
             'notes' => 'nullable|string'

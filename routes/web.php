@@ -7,11 +7,14 @@ use App\Http\Controllers\AdminFarmerController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminLandController;
 
+use App\Http\Controllers\LandController;
 
 // --- PUBLIC ROUTES (No login needed) ---
 Route::get('/', function () { return view('welcome'); });
 Route::get('/login', function () { return view('auth.login'); })->name('login');
-Route::get('/map-test', function () { return view('map-test'); });
+Route::get('/map-test', function () { 
+    return view('map-test'); 
+});
 Route::post('/login', [AuthController::class, 'login']);
 
 // --- PROTECTED ROUTES (Logged in users: Farmers AND Admins) ---

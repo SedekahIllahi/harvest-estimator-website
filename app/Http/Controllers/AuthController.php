@@ -22,8 +22,8 @@ class AuthController extends Controller // Make sure it extends Controller!
             $request->session()->regenerate();
 
             // Optional: Route them based on who they are
-            if (Auth::user()->role === 'bapak_dukuh') {
-                return redirect()->intended('/admin/pemetaan');
+            if (Auth::user()->role === 'admin') {
+                return redirect()->intended('/admin/dashboard');
             }
 
             // Redirect to your sandbox or farmer dashboard

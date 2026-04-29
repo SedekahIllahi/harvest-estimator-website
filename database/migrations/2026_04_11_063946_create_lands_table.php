@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('lands', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // If farmer is deleted, delete their lands
-            $table->string('nickname'); // e.g., "Sawah Kidul"
-            $table->decimal('area_size', 8, 2); // Size in Hectares
-            $table->decimal('lat', 10, 8)->nullable(); // GPS for mapping
-            $table->decimal('lng', 11, 8)->nullable(); 
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('nickname');
+            $table->decimal('area_size', 8, 2);
+            $table->decimal('lat', 10, 8)->nullable(); // Center point
+            $table->decimal('lng', 11, 8)->nullable(); // Center point
+            $table->json('boundaries')->nullable();    // THE NEW POLYGON ARRAY
             $table->timestamps();
         });
     }

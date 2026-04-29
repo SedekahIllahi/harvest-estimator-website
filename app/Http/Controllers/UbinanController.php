@@ -2,38 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ubinan;
 use App\Models\Land;
-use App\Models\User;
+use App\Models\Ubinan;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Routing\Route;
 
-class UbinanController
+class UbinanController extends Controller
 {
+    public function index()
+    {
+        // Fetch all estimates, eager loading the land and the farmer who owns it
+        $ubinans = Ubinan::with(['land.user'])->latest()->get();
+        // We'll need the lands for the "Create New Estimate" dropdown
+        $lands = Land::with('user')->get(); 
+        
+        return view('admin.ubinans.index', compact('ubinans', 'lands'));
+    }
+
     public function store(Request $request)
     {
-        // Check if user is authenticated
-        if (!auth()->check()) {
-            return redirect()->to('/login')->with('error', 'You must be logged in to save a ubinan record.');
-        }
-
-        // Validate the input
-        $request->validate([
+        $validated = $request->validate([
             'land_id' => 'required|exists:lands,id',
-            'sample_weight_kg' => 'required|decimal:5,2',
-            'weather_note' => 'nullable|string|max:255'
+            'sample_weight_kg' => 'required|numeric|min:0.1',
+            'projected_harvest_date' => 'required|date',
+            'notes' => 'nullable|string'
         ]);
 
-        // Create a new ubinan record
-        $ubinan = Ubinan::create([
-            'land_id' => $request->land_id,
-            'sample_weight_kg' => $request->sample_weight_kg,
-            'weather_note' => $request->weather_note or null,
-            'estimated_yield_tons' => null // We'll calculate this later
+        $land = Land::findOrFail($validated['land_id']);
+
+        // --- THE MATH ENGINE ---
+        // 1 Hectare = 10,000 sq meters. Sample plot = 6.25 sq meters.
+        $total_sq_meters = $land->area_size * 10000;
+        $multiplier = $total_sq_meters / 6.25;
+        $estimated_total_kg = $multiplier * $validated['sample_weight_kg'];
+
+        Ubinan::create([
+            'land_id' => $land->id,
+            'sample_weight_kg' => $validated['sample_weight_kg'],
+            'estimated_yield_kg' => $estimated_total_kg,
+            'projected_harvest_date' => $validated['projected_harvest_date'],
+            'notes' => $validated['notes'],
+            'status' => 'pending',
         ]);
 
-        // Return success response
-        return redirect()->back()->with('success', 'Ubinan record saved successfully!');
+        return back()->with('success', 'Estimasi panen berhasil dihitung dan disimpan!');
+    }
+
+    public function updateStatus(Request $request, Ubinan $ubinan)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pending,harvested,failed'
+        ]);
+
+        $ubinan->update(['status' => $validated['status']]);
+
+        return back()->with('success', 'Status panen diperbarui!');
     }
 }

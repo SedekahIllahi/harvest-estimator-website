@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -64,6 +66,7 @@
                         <input type="hidden" name="area_hectares" id="input_area">
                         <input type="hidden" name="lat" id="input_lat">
                         <input type="hidden" name="lng" id="input_lng">
+                        <input type="hidden" name="boundaries" id="boundaries">
 
                         <div class="bg-green-50 p-6 rounded-2xl border-2 border-dashed border-green-200 text-center">
                             <p class="text-xs text-green-600 font-bold uppercase tracking-widest">Luas Terhitung</p>
@@ -93,77 +96,114 @@
         </div>
     </div>
 
-    <script>
+<script>
         // --- MAP CONFIG ---
         const map = L.map('map', { zoomControl: false }).setView([-7.5, 110.0], 15);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // 1. Satellite Base
+        // ArcGIS Layers
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        
-        // 2. Road Labels (White/Bright)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}').addTo(map);
-
-        // 3. Place & City Labels
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        let points = [];
-        let markers = [];
-        let polygonLayer = null;
-
-        map.on('click', function(e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-
-            // First click sets the center coordinate for the DB
-            if (points.length === 0) {
-                document.getElementById('input_lat').value = lat;
-                document.getElementById('input_lng').value = lng;
-            }
-
-            points.push([lng, lat]);
-            const marker = L.circleMarker([lat, lng], { radius: 5, color: 'white', fillColor: '#f59e0b', fillOpacity: 1 }).addTo(map);
-            markers.push(marker);
-
-            updatePolygon();
+        // 1. Add the Geoman Toolbar
+        map.pm.addControls({
+            position: 'topleft',
+            drawMarker: false,
+            drawCircle: false,
+            drawPolyline: false,
+            drawRectangle: false,
+            drawCircleMarker: false,
+            drawText: false,
+            editMode: true,
+            dragMode: true, // Let them drag the whole shape if needed
+            cutPolygon: false,
+            removalMode: true,
         });
 
-        function updatePolygon() {
-            if (polygonLayer) map.removeLayer(polygonLayer);
-            if (points.length >= 3) {
-                let closed = [...points, points[0]];
-                let poly = turf.polygon([closed]);
-                let area = (turf.area(poly) / 10000).toFixed(4);
+        // Variable to hold the current drawn layer
+        let currentLayer = null;
 
-                document.getElementById('display_area').innerText = area;
-                document.getElementById('input_area').value = area;
+        // --- CORE FUNCTION: Process the shape and update HTML inputs ---
+        function processShape(layer) {
+            // Get boundaries for the JSON array
+            const latLngs = layer.getLatLngs()[0];
+            const boundaryArray = latLngs.map(point => [point.lat, point.lng]);
 
-                polygonLayer = L.polygon(closed.map(p => [p[1], p[0]]), {
-                    color: '#fbbf24', 
-                    fillColor: '#fbbf24', 
-                    fillOpacity: 0.4,
-                    weight: 3
-                }).addTo(map);
+            // Get center for the map pin anchor
+            const bounds = layer.getBounds();
+            const center = bounds.getCenter();
+
+            // Calculate Area with Turf.js (Converts Leaflet shape to GeoJSON for the math)
+            const geojson = layer.toGeoJSON();
+            const areaSqMeters = turf.area(geojson);
+            const areaHectares = (areaSqMeters / 10000).toFixed(4);
+
+            // Update the hidden form inputs
+            document.getElementById('boundaries').value = JSON.stringify(boundaryArray);
+            document.getElementById('input_lat').value = center.lat;
+            document.getElementById('input_lng').value = center.lng;
+            document.getElementById('input_area').value = areaHectares;
+
+            // Update the big green UI display
+            document.getElementById('display_area').innerText = areaHectares;
+        }
+
+        // 2. Listen for when a shape is drawn
+        map.on('pm:create', e => {
+            // Prevent multiple fields (Delete old one if it exists)
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
             }
+            
+            currentLayer = e.layer;
+
+            // Run the math immediately
+            processShape(currentLayer);
+
+            // Add listeners so if the admin edits or drags the shape later, the area updates live
+            currentLayer.on('pm:edit', () => processShape(currentLayer));
+            currentLayer.on('pm:dragend', () => processShape(currentLayer));
+        });
+
+        // 3. Clear inputs if the shape is deleted via the toolbar
+        map.on('pm:remove', e => {
+            if (e.layer === currentLayer) {
+                clearFormAndUI();
+            }
+        });
+
+        // --- BUTTON ACTIONS ---
+
+        function clearFormAndUI() {
+            currentLayer = null;
+            document.getElementById('boundaries').value = '';
+            document.getElementById('input_lat').value = '';
+            document.getElementById('input_lng').value = '';
+            document.getElementById('input_area').value = '';
+            document.getElementById('display_area').innerText = "0";
+        }
+
+        function resetMap() {
+            // Remove the shape from the map if it exists
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+            // Clear all the UI and hidden inputs
+            clearFormAndUI();
         }
 
         function getLocation() {
             if (!navigator.geolocation) return alert("Browser tidak support GPS");
+            
             navigator.geolocation.getCurrentPosition(pos => {
                 map.flyTo([pos.coords.latitude, pos.coords.longitude], 18);
-                L.marker([pos.coords.latitude, pos.coords.longitude]).addTo(map).bindPopup("Lokasi Anda").openPopup();
+                // Drop a tiny temporary pin to show where they are
+                L.marker([pos.coords.latitude, pos.coords.longitude])
+                 .addTo(map)
+                 .bindPopup("Lokasi Anda")
+                 .openPopup();
             });
-        }
-
-        function resetMap() {
-            points = [];
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            if (polygonLayer) map.removeLayer(polygonLayer);
-            document.getElementById('display_area').innerText = "0";
-            document.getElementById('input_area').value = "";
-            document.getElementById('input_lat').value = "";
-            document.getElementById('input_lng').value = "";
         }
     </script>
 </body>

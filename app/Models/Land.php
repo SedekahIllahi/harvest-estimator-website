@@ -9,7 +9,11 @@ class Land extends Model
     use HasFactory; // 2. Add this trait inside the class
 
     // Protect against mass-assignment vulnerabilities
-    protected $guarded = []; 
+    protected $guarded = [];
+
+    protected $casts = [
+        'boundaries' => 'array',
+    ];
 
     public function user()
     {

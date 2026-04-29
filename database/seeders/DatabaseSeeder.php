@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Bapak Kepala Desa',
             'phone' => '081111111111', // Admin Phone
             'password' => bcrypt('1234'), // Admin PIN
-            'role' => 'bapak_dukuh',
+            'role' => 'admin',
         ]);
 
         // 2. Spawn your personal test account

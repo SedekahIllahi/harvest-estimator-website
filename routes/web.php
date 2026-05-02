@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UbinanController;
 use App\Http\Controllers\AdminFarmerController;
 use App\Http\Controllers\LandController;
+use App\Http\Controllers\FarmerDashboardController;
+use App\Http\Controllers\AdminDashboardController;
 
 // --- PUBLIC ROUTES (No login needed) ---
 Route::get('/', function () {
@@ -32,12 +34,15 @@ Route::middleware('auth')->group(function () {
     // Logout (POST for security)
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Farmer Dashboard
-    Route::get('/dashboard', function () {
-        return view('farmer.dashboard');
-    })->name('dashboard');
-
-    // Admin/Dukuh Mapping Page
+    // === FARMER DASHBOARD ===
+    Route::get('/dashboard', [FarmerDashboardController::class, 'index'])->name('farmer.dashboard');
+    
+    // === ADMIN DASHBOARD (hanya untuk bapak_dukuh) ===
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/map-data', [AdminDashboardController::class, 'mapData'])->name('admin.map-data');
+    Route::get('/admin/farmers-list', [AdminDashboardController::class, 'farmersList'])->name('admin.farmers-list');
+    
+    // Admin mapping page (view)
     Route::get('/admin/pemetaan', function () {
         return view('admin.mapping');
     })->name('admin.mapping');

@@ -3,43 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Land;
-use App\Models\User;
-use App\Services\HarvestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class LandController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth'); // membutuhkan login
-    }
-
-    /**
-     * Menampilkan daftar lahan milik user (petani) atau semua lahan jika admin.
-     */
+    // 1. Just fetch the logged-in farmer's land. No Admin checks here.
     public function index()
     {
-        $user = Auth::user();
-        if ($user->isBapakDukuh()) {
-            $lands = Land::with('user')->get();
-        } else {
-            $lands = Land::where('user_id', $user->id)->with('user')->get();
-        }
+        $lands = Land::where('user_id', Auth::id())->with('user')->get();
         return view('lands.index', compact('lands'));
     }
 
-    /**
-     * Form tambah lahan.
-     */
     public function create()
     {
         return view('lands.create');
     }
 
-    /**
-     * Menyimpan lahan baru.
-     */
+    // 2. Protect the store method
     public function store(Request $request)
     {
         $request->validate([
@@ -47,6 +28,8 @@ class LandController extends Controller
             'area_size' => 'required|numeric|min:0',
             'lat' => 'nullable|numeric',
             'lng' => 'nullable|numeric',
+            // Notice we don't validate 'boundaries' here. Farmers can just drop a pin for now, 
+            // and the admin can draw the actual polygon later on the master map.
         ]);
 
         Land::create([
@@ -60,42 +43,22 @@ class LandController extends Controller
         return redirect()->route('lands.index')->with('success', 'Lahan berhasil ditambahkan.');
     }
 
-    /**
-     * Detail lahan.
-     */
+    // 3. Strict security: Automatically 404 if a farmer tries to view someone else's land
     public function show($id)
     {
-        $land = Land::with('user', 'ubinans')->findOrFail($id);
-        $user = Auth::user();
-        if ($user->isFarmer() && $land->user_id !== $user->id) {
-            abort(403, 'Unauthorized');
-        }
+        $land = Land::where('id', $id)->where('user_id', Auth::id())->with('ubinans')->firstOrFail();
         return view('lands.show', compact('land'));
     }
 
-    /**
-     * Form edit lahan.
-     */
     public function edit($id)
     {
-        $land = Land::findOrFail($id);
-        $user = Auth::user();
-        if ($user->isFarmer() && $land->user_id !== $user->id) {
-            abort(403);
-        }
+        $land = Land::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         return view('lands.edit', compact('land'));
     }
 
-    /**
-     * Update lahan.
-     */
     public function update(Request $request, $id)
     {
-        $land = Land::findOrFail($id);
-        $user = Auth::user();
-        if ($user->isFarmer() && $land->user_id !== $user->id) {
-            abort(403);
-        }
+        $land = Land::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
 
         $request->validate([
             'nickname' => 'required|string|max:255',
@@ -104,22 +67,17 @@ class LandController extends Controller
             'lng' => 'nullable|numeric',
         ]);
 
+        // Only update these fields so we don't accidentally overwrite the admin's polygon boundaries
         $land->update($request->only(['nickname', 'area_size', 'lat', 'lng']));
 
         return redirect()->route('lands.index')->with('success', 'Lahan berhasil diperbarui.');
     }
 
-    /**
-     * Hapus lahan.
-     */
     public function destroy($id)
     {
-        $land = Land::findOrFail($id);
-        $user = Auth::user();
-        if ($user->isFarmer() && $land->user_id !== $user->id) {
-            abort(403);
-        }
+        $land = Land::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         $land->delete();
+        
         return redirect()->route('lands.index')->with('success', 'Lahan berhasil dihapus.');
     }
 }

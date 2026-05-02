@@ -11,18 +11,16 @@ class Land extends Model
 
     protected $table = 'lands';
 
-    protected $fillable = [
-        'user_id',
-        'nickname',
-        'area_size',
-        'lat',
-        'lng',
-    ];
+    // We use guarded instead of fillable so we don't have to update this 
+    // every single time we add a new column to the database.
+    protected $guarded = [];
 
+    // Merged everything into ONE clean casts array
     protected $casts = [
         'area_size' => 'decimal:2',
         'lat' => 'decimal:8',
         'lng' => 'decimal:8',
+        'boundaries' => 'array', // CRITICAL for the map polygons!
     ];
 
     /**

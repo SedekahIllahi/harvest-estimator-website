@@ -10,16 +10,24 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('ubinans', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('land_id')->constrained()->cascadeOnDelete();
-            $table->decimal('sample_weight_kg', 5, 2); // The 2.5m x 2.5m harvest weight
-            $table->decimal('estimated_yield_tons', 8, 2); // The final calculation
-            $table->string('weather_note')->nullable(); // e.g., "Kemarau"
-            $table->timestamps();
-        });
-    }
+        {
+            Schema::create('ubinans', function (Blueprint $table) {
+                $table->id();
+                // Link it to the land. If a land is deleted, its harvest history goes with it.
+                $table->foreignId('land_id')->constrained('lands')->cascadeOnDelete();
+                
+                // The inputs & outputs
+                $table->decimal('sample_weight_kg', 5, 2); 
+                $table->decimal('estimated_yield_kg', 10, 2); 
+                
+                // Status tracking
+                $table->string('status')->default('pending'); // 'pending', 'harvested', 'failed'
+                $table->date('projected_harvest_date');
+                
+                $table->text('notes')->nullable();
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

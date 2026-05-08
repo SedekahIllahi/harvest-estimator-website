@@ -20,14 +20,14 @@ class UbinanController extends Controller
         if ($user->isAdmin()) {
             // ADMIN VIEW: See all estimates + all lands for the dropdown
             $ubinans = Ubinan::with(['land.user'])->latest()->get();
-            $lands = Land::with('user')->get(); 
+            $lands = Land::with('user')->get();
             return view('admin.ubinans.index', compact('ubinans', 'lands'));
         } else {
             // FARMER VIEW: See only their own estimates
             $ubinans = Ubinan::whereHas('land', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })->with('land')->latest()->get();
-            
+
             // Assuming your friend made a 'ubinans.index' view for the farmer side
             return view('ubinans.index', compact('ubinans'));
         }
@@ -53,18 +53,16 @@ class UbinanController extends Controller
             abort(403, 'Unauthorized. You do not own this land.');
         }
 
-        // --- THE MATH ENGINE ---
-        // 1 Hectare = 10,000 sq meters. Sample plot = 6.25 sq meters.
-        $total_sq_meters = $land->area_size * 10000;
-        $multiplier = $total_sq_meters / 6.25;
+        // --- THE MATH ENGINE (SQUARE METERS) ---
+        // Area is already in m². Standard sample plot (ubinan) is 2.5m x 2.5m = 6.25 m².
+        $multiplier = $land->area_size / 6.25;
         $estimated_total_kg = $multiplier * $validated['sample_weight_kg'];
-
         Ubinan::create([
             'land_id' => $land->id,
             'sample_weight_kg' => $validated['sample_weight_kg'],
             'estimated_yield_kg' => $estimated_total_kg,
             'projected_harvest_date' => $validated['projected_harvest_date'],
-            'notes' => $validated['notes'],
+            'notes' => $validated['notes'] ?? null,
             'status' => 'pending', // Defaults to pending
         ]);
 
@@ -77,9 +75,9 @@ class UbinanController extends Controller
     public function updateStatus(Request $request, Ubinan $ubinan)
     {
         $user = Auth::user();
-        
+
         // Block farmers from changing official statuses
-        if (!$user->isBapakDukuh()) {
+        if (!$user->isAdmin()) {
             abort(403, 'Hanya admin yang dapat mengubah status.');
         }
 

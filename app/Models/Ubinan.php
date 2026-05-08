@@ -14,8 +14,10 @@ class Ubinan extends Model
     protected $fillable = [
         'land_id',
         'sample_weight_kg',
-        'estimated_yield_tons',
-        'weather_note',
+        'estimated_yield_kg',      // <- Added
+        'projected_harvest_date',  // <- Added
+        'status',                  // <- Added
+        'notes',                   // <- Added
     ];
 
     /**

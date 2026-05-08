@@ -3,23 +3,36 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Land;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 1. Spawn the Boss (Bapak Dukuh)
+        User::create([
+            'name' => 'Admin Utama',
+            'phone' => '081111111111',
+            'password' => bcrypt('123456'),
+            'role' => 'admin',
         ]);
+
+        // 2. Spawn your personal test account
+        $you = User::create([
+            'name' => 'Kang Tester',
+            'phone' => '082222222222',
+            'password' => bcrypt('123456'),
+            'role' => 'farmer',
+        ]);
+
+        Land::factory(2)->create(['user_id' => $you->id]);
+
+        // 3. Spawn 10 random farmers with lands
+        User::factory(10)->create()->each(function ($farmer) {
+            Land::factory(rand(1, 3))->create([
+                'user_id' => $farmer->id
+            ]);
+        });
     }
 }

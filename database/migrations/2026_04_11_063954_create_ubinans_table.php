@@ -21,7 +21,7 @@ return new class extends Migration
                 $table->decimal('estimated_yield_kg', 10, 2); 
                 
                 // Status tracking
-                $table->string('status')->default('pending'); // 'pending', 'harvested', 'failed'
+                $table->enum('status', ['pending', 'harvested', 'failed'])->default('pending');
                 $table->date('projected_harvest_date');
                 
                 $table->text('notes')->nullable();

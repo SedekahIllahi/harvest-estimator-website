@@ -12,9 +12,9 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Spawn the Boss (Bapak Dukuh)
         User::create([
-            'name' => 'Bapak Kepala Desa',
+            'name' => 'Admin Utama',
             'phone' => '081111111111',
-            'password' => bcrypt('1234'),
+            'password' => bcrypt('123456'),
             'role' => 'admin',
         ]);
 
@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         $you = User::create([
             'name' => 'Kang Tester',
             'phone' => '082222222222',
-            'password' => bcrypt('1234'),
+            'password' => bcrypt('123456'),
             'role' => 'farmer',
         ]);
 
@@ -34,8 +34,5 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $farmer->id
             ]);
         });
-
-        // 4. Call PriceSeeder to insert commodity prices and conversion factors
-        $this->call(PriceSeeder::class);
     }
 }

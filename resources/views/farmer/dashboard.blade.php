@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>SiKAPAN – Dashboard Petani</title>
+    <title>SiPanen – Dashboard Petani</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -52,7 +53,7 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .topbar-bell {
@@ -308,15 +309,112 @@
         .nav-icon.active svg {
             stroke: white;
         }
+
+        /* HORIZONTAL SLIDER WRAPPER */
+        .price-carousel {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding-bottom: 8px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            /* Firefox */
+            margin: 0 -16px;
+            /* Bleed to edges */
+            padding: 0 16px 8px 16px;
+            /* Keep inner padding */
+        }
+
+        .price-carousel::-webkit-scrollbar {
+            display: none;
+            /* Hide scrollbar for clean look */
+        }
+
+        /* CAROUSEL CARDS */
+        .price-carousel .stat-card {
+            min-width: 85%;
+            /* 85% width lets the next card peek out, hinting they can scroll */
+            scroll-snap-align: center;
+            flex-shrink: 0;
+        }
+
+        /* DYNAMIC DELTA COLORS */
+        .stat-delta.up {
+            color: #3e9c5e;
+            background: #eaf6ef;
+        }
+
+        .stat-delta.down {
+            color: #d53f3f;
+            background: #fcebeb;
+        }
+
+        .stat-delta.flat {
+            color: #6b8a6b;
+            background: #eef2ec;
+        }
+
+        /* BAR CHART STYLING */
+        .bar-chart-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 150px;
+            /* Chart height */
+            padding-top: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eef2ec;
+        }
+
+        .bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+            width: 100%;
+        }
+
+        .bar-value {
+            font-size: 11px;
+            font-weight: 800;
+            color: #1a2e1a;
+            margin-bottom: 8px;
+            opacity: 0;
+            transform: translateY(5px);
+            animation: slideUp 0.3s forwards 0.4s;
+        }
+
+        .bar {
+            width: 32px;
+            background: linear-gradient(180deg, #3e9c5e 0%, #2d4a2d 100%);
+            border-radius: 6px 6px 0 0;
+            box-shadow: 0 4px 10px rgba(62, 156, 94, 0.2);
+            /* Initial state for animation */
+            height: 0%;
+            animation: growBar 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes growBar {
+            to {
+                height: var(--target-height);
+            }
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="phone-shell">
 
-        <!-- TOP BAR -->
         <div class="topbar">
-            <span class="topbar-logo">SiKAPAN</span>
+            <span class="topbar-logo">SiPanen</span>
             <div class="topbar-bell">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -328,118 +426,127 @@
 
         <div class="scroll-area">
 
-            <!-- CARD CUACA -->
             <div class="stat-card">
                 <div class="stat-info">
-                    <span class="stat-label">Perkiraan Cuaca</span>
-                    <span class="stat-value">{{ $weatherTemp }}</span>
-                    <span class="stat-delta">{{ $weatherDelta }}</span>
+                    <span class="stat-label" id="weather-desc">Memuat Cuaca...</span>
+                    <span class="stat-value" id="weather-temp">--°C</span>
+                    <span class="stat-delta" id="weather-location">Sinkronisasi GPS...</span>
                 </div>
-                <div class="stat-icon purple">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 2v2M4.93 4.93l1.41 1.41M2 12h2M4.93 19.07l1.41-1.41M12 20v2M19.07 19.07l-1.41-1.41M22 12h-2M19.07 4.93l-1.41 1.41M12 6a6 6 0 100 12 6 6 0 000-12z" />
-                    </svg>
+                <div class="stat-icon purple flex items-center justify-center">
+                    <i id="weather-icon" class="fas fa-spinner fa-spin" style="font-size: 24px; color: white;"></i>
                 </div>
             </div>
 
-            <!-- HARGA JUAL -->
-            <div class="stat-card">
-                <div class="stat-info">
-                    <span class="stat-label">Harga Jual Hari Ini</span>
-                    <span class="stat-value">{{ $hargaJual }}</span>
-                    <span class="stat-delta">+5.2% dari bulan lalu</span>
-                </div>
-                <div class="stat-icon orange">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-                        <path d="M3 6h18" />
-                        <path d="M16 10a4 4 0 01-8 0" />
-                    </svg>
-                </div>
-            </div>
+            <div class="price-carousel">
+                {{-- Assuming your controller passes a $cropPrices collection/array --}}
+                @foreach($cropPrices as $crop)
+                @php
+                // The Math (Prevent division by zero just in case)
+                $diff = $crop->current_price - $crop->last_price;
+                $percent = $crop->last_price > 0 ? round(($diff / $crop->last_price) * 100, 1) : 0;
 
-            <!-- PERKIRAAN PANEN -->
-            <div class="stat-card">
-                <div class="stat-info">
-                    <span class="stat-label">Perkiraan Panen</span>
-                    <span class="stat-value">{{ $estimasiRange }}</span>
-                    <span class="stat-delta">Berdasarkan {{ number_format($totalLuas, 2) }} Ha lahan</span>
-                </div>
-                <div class="stat-icon orange">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-                        <path d="M12 6v6l4 2" />
-                    </svg>
-                </div>
-            </div>
+                // The Logic
+                $isUp = $percent > 0;
+                $isDown = $percent < 0;
 
-            <!-- CHART PENJUALAN -->
-            <div class="chart-card">
-                <div class="chart-title">Grafik Penjualan</div>
-                <div class="chart-sub">Total panen (kg) per bulan</div>
-                <div class="chart-svg-wrap">
-                    <svg viewBox="0 0 320 130" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#7c6fcf" stop-opacity="0.35" />
-                                <stop offset="100%" stop-color="#7c6fcf" stop-opacity="0.02" />
-                            </linearGradient>
-                        </defs>
-                        <line x1="0" y1="30" x2="320" y2="30" stroke="#e2e8e0" stroke-width="1.2" />
-                        <line x1="0" y1="60" x2="320" y2="60" stroke="#e2e8e0" stroke-width="1.2" />
-                        <line x1="0" y1="90" x2="320" y2="90" stroke="#e2e8e0" stroke-width="1.2" />
-                        @php
-                            $maxVal = max($chartValues) ?: 1;
-                            $points = [];
-                            $xStep = 320 / (count($chartValues) - 1);
-                            foreach ($chartValues as $i => $val) {
-                                $y = 110 - ($val / $maxVal) * 90;
-                                $x = $i * $xStep;
-                                $points[] = "$x $y";
-                            }
-                            $polyline = implode(' L ', $points);
-                        @endphp
-                        <path d="M0 110 L {{ $polyline }} L 320 110 Z" fill="url(#areaGrad)" />
-                        <polyline points="{{ $polyline }}" stroke="#7c6fcf" stroke-width="2.5" fill="none" stroke-linecap="round" />
-                    </svg>
-                </div>
-                <div class="chart-labels">
-                    @foreach($chartLabels as $label)
-                        <span>{{ $label }}</span>
-                    @endforeach
-                </div>
-            </div>
+                    // The Styling
+                    $deltaClass=$isUp ? 'up' : ($isDown ? 'down' : 'flat' );
+                    $sign=$isUp ? '+' : '' ; // Negative already has a minus sign
+                    @endphp
 
-            <!-- RINGKASAN PANEN (lebih rapi) -->
-            <div class="total-card">
-                <div class="total-title">Ringkasan Panen</div>
-                <div class="total-stats">
-                    <div class="total-item">
-                        <span class="total-item-label">Lokasi</span>
-                        <div class="flag-wrap">
-                            <span class="flag">{{ $totalPanenData['flag'] }}</span>
-                            <span class="total-item-value" style="font-size: 14px;">{{ $totalPanenData['country'] }}</span>
-                        </div>
+                    <div class="stat-card">
+                    <div class="stat-info">
+                        <span class="stat-label">Harga {{ $crop->name }}</span>
+                        <span class="stat-value">Rp {{ number_format($crop->current_price, 0, ',', '.') }}</span>
+                        <span class="stat-delta {{ $deltaClass }}">
+                            {{ $sign }}{{ $percent }}% dari harga terakhir
+                        </span>
                     </div>
-                    <div class="total-item">
-                        <span class="total-item-label">Total (kg)</span>
-                        <div class="total-item-value">{{ $totalPanenData['sales'] }}</div>
+                    <div class="stat-icon orange">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                            <path d="M3 6h18" />
+                            <path d="M16 10a4 4 0 01-8 0" />
+                        </svg>
                     </div>
-                    <div class="total-item">
-                        <span class="total-item-label">Nilai</span>
-                        <div class="total-item-value">{{ $totalPanenData['value'] }}</div>
-                    </div>
-                    <div class="total-item">
-                        <span class="total-item-label">Kenaikan</span>
-                        <div class="total-item-value">{{ $totalPanenData['bounce'] }}</div>
-                    </div>
-                </div>
             </div>
+            @endforeach
+        </div>
 
+        <div class="stat-card">
+            <div class="stat-info">
+                <span class="stat-label">Perkiraan Panen</span>
+                <span class="stat-value">{{ $estimasiRange }}</span>
+                <span class="stat-delta">Berdasarkan {{ number_format($totalLuas, 2) }} Ha lahan</span>
+            </div>
+            <div class="stat-icon orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                    <path d="M12 6v6l4 2" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">Riwayat Hasil Ubinan</div>
+            <div class="chart-sub">Perbandingan estimasi panen (kg) terakhir</div>
+
+            <div class="bar-chart-container">
+                @php
+                // Find the max value to calculate bar heights. Prevent division by zero.
+                $maxVal = max($chartValues) ?: 1;
+                @endphp
+
+                @foreach($chartValues as $i => $val)
+                @php
+                // Calculate percentage height based on the maximum value
+                $heightPct = ($val / $maxVal) * 100;
+                // Give it a minimum 5% height so the bar isn't invisible if value is 0
+                if($heightPct < 5) $heightPct=5;
+                    @endphp
+
+                    <div class="bar-wrapper">
+                    <span class="bar-value">{{ $val > 0 ? number_format($val, 0, ',', '.') : '-' }}</span>
+                    <div class="bar" style="--target-height: {{ $heightPct }}%;"></div>
+            </div>
+            @endforeach
+        </div>
+
+        <div class="chart-labels">
+            @foreach($chartLabels as $label)
+            <span>{{ $label }}</span>
+            @endforeach
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
+    <div class="total-card">
+        <div class="total-title">Ringkasan Panen</div>
+        <div class="total-stats">
+            <div class="total-item">
+                <span class="total-item-label">Lokasi</span>
+                <div class="flag-wrap">
+                    <span class="flag">{{ $totalPanenData['flag'] }}</span>
+                    <span class="total-item-value" style="font-size: 14px;">{{ $totalPanenData['country'] }}</span>
+                </div>
+            </div>
+            <div class="total-item">
+                <span class="total-item-label">Total (kg)</span>
+                <div class="total-item-value">{{ $totalPanenData['sales'] }}</div>
+            </div>
+            <div class="total-item">
+                <span class="total-item-label">Nilai</span>
+                <div class="total-item-value">{{ $totalPanenData['value'] }}</div>
+            </div>
+            <div class="total-item">
+                <span class="total-item-label">Kenaikan</span>
+                <div class="total-item-value">{{ $totalPanenData['bounce'] }}</div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    </div>
+
     <div class="bottom-nav">
         <a href="{{ route('farmer.dashboard') }}">
             <div class="nav-icon active">
@@ -479,6 +586,103 @@
             </div>
         </a>
     </div>
-</body>
 
-</html>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            getWeather();
+        });
+
+        const weatherCodes = {
+            0: {
+                label: 'Cerah',
+                icon: 'fa-sun'
+            },
+            1: {
+                label: 'Cerah Berawan',
+                icon: 'fa-cloud-sun'
+            },
+            2: {
+                label: 'Berawan',
+                icon: 'fa-cloud-sun'
+            },
+            3: {
+                label: 'Mendung',
+                icon: 'fa-cloud'
+            },
+            45: {
+                label: 'Berkabut',
+                icon: 'fa-smog'
+            },
+            48: {
+                label: 'Kabut Tebal',
+                icon: 'fa-smog'
+            },
+            51: {
+                label: 'Gerimis Ringan',
+                icon: 'fa-cloud-rain'
+            },
+            53: {
+                label: 'Gerimis',
+                icon: 'fa-cloud-rain'
+            },
+            61: {
+                label: 'Hujan Ringan',
+                icon: 'fa-cloud-rain'
+            },
+            63: {
+                label: 'Hujan Sedang',
+                icon: 'fa-cloud-showers-heavy'
+            },
+            65: {
+                label: 'Hujan Lebat',
+                icon: 'fa-cloud-showers-heavy'
+            },
+            95: {
+                label: 'Hujan Badai',
+                icon: 'fa-bolt'
+            },
+        };
+
+        function fetchWeatherData(lat, lng) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=auto`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const current = data.current;
+                    const codeInfo = weatherCodes[current.weather_code] || {
+                        label: 'Berawan',
+                        icon: 'fa-cloud'
+                    };
+
+                    document.getElementById('weather-temp').innerText = `${Math.round(current.temperature_2m)}°C`;
+                    document.getElementById('weather-desc').textContent = codeInfo.label;
+                    document.getElementById('weather-icon').className = `fas ${codeInfo.icon}`;
+                    document.getElementById('weather-location').textContent = "Lokasi Saat Ini";
+                })
+                .catch(err => {
+                    document.getElementById('weather-temp').innerText = "--°C";
+                    document.getElementById('weather-desc').textContent = "Gagal memuat";
+                    document.getElementById('weather-icon').className = "fas fa-exclamation-triangle";
+                    document.getElementById('weather-location').textContent = "Offline";
+                });
+        }
+
+        function getWeather() {
+            // Default center if user denies GPS (Central Java)
+            const fallbackLat = -7.5;
+            const fallbackLng = 110.0;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => fetchWeatherData(pos.coords.latitude, pos.coords.longitude),
+                    (err) => fetchWeatherData(fallbackLat, fallbackLng), {
+                        timeout: 5000
+                    }
+                );
+            } else {
+                fetchWeatherData(fallbackLat, fallbackLng);
+            }
+        }
+    </script>
+</body>

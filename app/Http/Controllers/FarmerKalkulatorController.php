@@ -12,7 +12,12 @@ class FarmerKalkulatorController extends Controller
      */
     public function index()
     {
-        return view('farmer.kalkulator');
+        $latestPrices = \App\Models\CommodityPrice::orderBy('effective_date', 'desc')
+            ->get()
+            ->unique('crop_name');
+
+        // Pass it to the view
+        return view('farmer.kalkulator', compact('latestPrices'));;
     }
 
     /**

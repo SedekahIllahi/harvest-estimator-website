@@ -6,7 +6,7 @@ use App\Http\Controllers\UbinanController;
 use App\Http\Controllers\AdminFarmerController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminLandController;
-use App\Http\Controllers\AdminPriceController; // [TAMBAH] Import controller price
+use App\Http\Controllers\CommodityPriceController;
 
 // Farmer Controllers
 use App\Http\Controllers\FarmerDashboardController;
@@ -16,15 +16,16 @@ use App\Http\Controllers\FarmerKalkulatorController;
 use App\Http\Controllers\FarmerRiwayatController;
 
 // --- PUBLIC ROUTES ---
-Route::get('/', function () { return view('welcome'); });
-Route::get('/login', function () { return view('auth.login'); })->name('login');
+Route::get('/', function () {
+    return view('welcome');
+});
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/map-test', function () { return view('map-test'); });
-
-// [TAMBAH] API untuk mengambil data price (digunakan kalkulator farmer)
-Route::get('/api/prices', function () {
-    return App\Models\Price::all(['slug', 'commodity', 'price_per_kg', 'conversion_factor']);
-})->name('api.prices');
+Route::get('/map-test', function () {
+    return view('map-test');
+});
 
 // --- FARMER ROUTES (Login required) ---
 Route::middleware(['auth'])->group(function () {
@@ -34,11 +35,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [FarmerDashboardController::class, 'index'])->name('farmer.dashboard');
 
     // Sandbox (jika masih dipakai)
-    Route::get('/sandbox', function () { return view('sandbox'); });
+    Route::get('/sandbox', function () {
+        return view('sandbox');
+    });
 
     // Ubinan input untuk petani
-    Route::post('/ubinans', [UbinanController::class, 'store'])->name('ubinans.store');
-
+    Route::post('/ubinans', [UbinanController::class, 'store'])->name('farmer.ubinans.store');
+    
     // Manajemen lahan milik petani sendiri (menggunakan FarmerLandController)
     Route::resource('my-lands', FarmerLandController::class)->names([
         'index' => 'farmer.lands.index',
@@ -61,11 +64,13 @@ Route::middleware(['auth'])->group(function () {
 
 // --- ADMIN ROUTES (God Mode) ---
 Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
-    
+
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     // Manajemen Petani
-    Route::get('/tambah-petani', function () { return view('admin.register-farmer'); })->name('register-farmer');
+    Route::get('/tambah-petani', function () {
+        return view('admin.farmers.register-farmer');
+    })->name('farmers.register-farmer');
     Route::get('/farmers', [AdminFarmerController::class, 'index'])->name('farmers.index');
     Route::post('/farmers', [AdminFarmerController::class, 'store'])->name('farmers.store');
     Route::get('/farmers/{farmer}/edit', [AdminFarmerController::class, 'edit'])->name('farmers.edit');
@@ -83,6 +88,8 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
     Route::post('/ubinans', [UbinanController::class, 'store'])->name('ubinans.store');
     Route::patch('/ubinans/{ubinan}/status', [UbinanController::class, 'updateStatus'])->name('ubinans.update-status');
 
-    // [TAMBAH] Route untuk update harga komoditas (Price)
-    Route::put('/prices/{price}', [AdminPriceController::class, 'update'])->name('prices.update');
+    Route::get('/harga-pasar', [CommodityPriceController::class, 'index'])->name('prices.index');
+    Route::post('/harga-pasar', [CommodityPriceController::class, 'store'])->name('prices.store');
+    Route::put('/harga-pasar/{price}', [CommodityPriceController::class, 'update'])->name('prices.update');
+    Route::delete('/harga-pasar/{price}', [CommodityPriceController::class, 'destroy'])->name('prices.destroy');
 });

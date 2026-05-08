@@ -44,14 +44,11 @@ class FarmerDashboardController extends Controller
         ];
 
         return view('farmer.dashboard', compact(
-            'totalLahan',
-            'totalLuas',
-            'estimasiRange',
-            'hargaJual',
-            'chartLabels',
-            'chartValues',
-            'weatherTemp',
-            'weatherDelta',
+            'totalLuas', 
+            'hargaJual', 
+            'estimasiRange', 
+            'chartLabels', 
+            'chartValues', 
             'totalPanenData'
         ));
     }
